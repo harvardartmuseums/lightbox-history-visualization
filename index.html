@@ -1,0 +1,468 @@
+<!DOCTYPE html>
+<html>
+<head>
+
+<meta charset="UTF-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<title>Lightbox History</title>
+
+<style>
+body, html {
+	height: 100%;
+	width: 100%;
+	overflow: hidden;
+	margin: 0px;
+	padding: 0px;
+	font-family: Helvetica;
+}
+.graph {
+	width: 100%;
+	height: 100%;
+	overflow: hidden;
+}
+.label {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	position: absolute;
+	opacity: 0;
+	overflow: hidden;
+}
+.label span {
+	text-align: center;
+}
+.arc {
+	opacity: 0;
+	pointer-events: none;
+}
+.link, .marker {
+	opacity: 0;
+}
+</style>
+</head>
+<body>
+<div id="graph"></div>
+<div class="label" style="opacity: 0"></div>
+<script src="js/d3.min.js"></script>
+<script>
+var minDate = new Date(2014, 10, 16, 12, 0, 0, 0);
+var maxDate = new Date(2017, 5, 31, 12, 0, 0, 0);
+var calendar = [
+	{date: minDate, event: "Museums open"},
+	{date: new Date(2014, 12, 3, 12, 0, 0, 0), event: "Fall term ends"},
+	{date: new Date(2015, 0, 26, 12, 0, 0, 0), event: "Spring term starts"},
+	{date: new Date(2015, 3, 29, 12, 0, 0, 0), event: "Spring term ends"},
+	{date: new Date(2015, 4, 28, 12, 0, 0, 0), event: "Commencement"},
+	{date: new Date(2015, 8, 2, 12, 0, 0, 0), event: "Fall term starts"},
+	{date: new Date(2015, 11, 3, 12, 0, 0, 0), event: "Fall term ends"},
+	{date: new Date(2016, 0, 25, 12, 0, 0, 0), event: "Spring term starts"},
+	{date: new Date(2016, 3, 27, 12, 0, 0, 0), event: "Spring term ends"},
+	{date: new Date(2016, 4, 26, 12, 0, 0, 0), event: "Commencement"},
+	{date: new Date(2016, 7, 31, 12, 0, 0, 0), event: "Fall term starts"},
+	{date: new Date(2016, 11, 2, 12, 0, 0, 0), event: "Fall term ends"},
+	{date: new Date(2017, 0, 23, 12, 0, 0, 0), event: "Spring term starts"},
+	{date: new Date(2017, 3, 26, 12, 0, 0, 0), event: "Spring term ends"},
+	{date: new Date(2017, 4, 25, 12, 0, 0, 0), event: "Commencement"}
+];
+
+var venues = "metaLAB (at) Harvard;16-Nov-2014 - 27-May-2015;Venues;16-Nov-2014 - 24-Mar-2015, Harvard Art Museums;26-Mar-2015 - 29-Mar-2015, Harvard Art Museums;31-Mar-2015, Harvard Art Museums;2-Apr-2015 - 6-Apr-2015, Harvard Art Museums;8-Apr-2015, Harvard Art Museums;10-Apr-2015 - 12-Apr-2015, Harvard Art Museums;14-Apr-2015 - 16-Apr-2015, Harvard Art Museums;27-Apr-2015 - 14-May-2015, Harvard Art Museums;16-May-2015 - 27-May-2015, Harvard Art Museums;19-Dec-2016 - 22-Dec-2016, Harvard Art Museums;9-Jan-2017 - 22-Jan-2017, Harvard Art Museums;New Digs and Discoveries at Sardis in Turkey;25-Mar-2015;Venues;25-Mar-2015, Harvard Art Museums;Visualizing Museum Data;30-Mar-2015 - 16-Nov-2015;Venues;30-Mar-2015, Harvard Art Museums;28-May-2015, Harvard Art Museums;16-Nov-2015, Harvard Art Museums;What Is to Be Undone? Modernism in the 21st Century;1-Apr-2015;Venues;1-Apr-2015, Harvard Art Museums;Copley Painting Viewer;7-Apr-2015 - 13-Apr-2015;Venues;7-Apr-2015, Harvard Art Museums;9-Apr-2015, Harvard Art Museums;13-Apr-2015, Harvard Art Museums;Lightbox Navigations - Object Map;17-Apr-2015 - 26-Apr-2015;Venues;17-Apr-2015, Harvard Art Museums;23-Apr-2015, Harvard Art Museums;26-Apr-2015, Harvard Art Museums;Feral Trees;18-Apr-2015;Venues;18-Apr-2015, Harvard Art Museums;Cleanup;19-Apr-2015;Venues;19-Apr-2015, Harvard Art Museums;KCR;20-Apr-2015;Venues;20-Apr-2015, Harvard Art Museums;The Small Fiction Collider;21-Apr-2015;Venues;21-Apr-2015, Harvard Art Museums;The Clock;22-Apr-2015;Venues;22-Apr-2015, Harvard Art Museums;Uncovering the Museums' Hidden Data;24-Apr-2015 - 25-Apr-2015;Venues;24-Apr-2015, Harvard Art Museums;25-Apr-2015, Harvard Art Museums;Mapping Cultural Space;15-May-2015;Venues;15-May-2015, Harvard Art Museums;Thinking with Collections;28-May-2015 - 5-Jul-2015;Venues;29-May-2015 - 5-Jul-2015, Harvard Art Museums;Beautiful Data II;6-Jul-2015 - 16-Jul-2015;Venues;6-Jul-2015 - 16-Jul-2015, Harvard Art Museums;Astro-Art Project;11-Sep-2015 - 22-Nov-2015;Venues;11-Sep-2015 - 4-Oct-2015, Harvard Art Museums; 10-Oct-2015 - 11-Oct-2015, Harvard Art Museums; 13-Oct-2015 - 18-Oct-2015, Harvard Art Museums; 20-Oct-2015 - 21-Oct-2015, Harvard Art Museums; 23-Oct-2015 - 25-Oct-2015, Harvard Art Museums; 27-Oct-2015 - 28-Oct-2015, Harvard Art Museums; 30-Oct-2015 - 15-Nov-2015, Harvard Art Museums; 17-Nov-2015 - 18-Nov-2015, Harvard Art Museums; 20-Nov-2015 - 22-Nov-2015, Harvard Art Museums;American Archives Month 2015;5-Oct-2015 - 26-Oct-2015;Venues;5-Oct-2015, Harvard Art Museums;12-Oct-2015, Harvard Art Museums;19-Oct-2015, Harvard Art Museums;26-Oct-2015, Harvard Art Museums;Imaging Unseen Layers;6-Oct-2015 - 15-Apr-2016;Venues;6-Oct-2015, Harvard Art Museums;15-Apr-2016, Harvard Art Museums;Visualizing the X-Ray Universe;7-Oct-2015;Venues;7-Oct-2015, Harvard Art Museums;The Solar;8-Oct-2015;Venues;8-Oct-2015, Harvard Art Museums;World Wide Telescope;9-Oct-2015 - 21-Apr-2016;Venues;9-Oct-2015, Harvard Art Museums;21-Apr-2016, Harvard Art Museums;Feke's Isaac Royall and His Family;22-Oct-2015;Venues;22-Oct-2015, Harvard Art Museums;AMPM;29-Oct-2015;Venues;29-Oct-2015, Harvard Art Museums;Exploring Light;19-Nov-2015;Venues;19-Nov-2015, Harvard Art Museums;Vincent van Gogh's Three Pairs of Shoes;23-Nov-2015 - 31-Jan-2016;Venues;23-Nov-2015 - 30-Nov-2015, Harvard Art Museums; 2-Dec-2015 - 19-Jan-2016, Harvard Art Museums; 23-Jan-2016 - 31-Jan-2016, Harvard Art Museums;Radiant Presence;1-Dec-2015;Venues;1-Dec-2015, Harvard Art Museums;American Professional Photographers Collection J-Term Workshop;20-Jan-2016 - 22-Jan-2016;Venues;20-Jan-2016, Harvard Art Museums;22-Jan-2016, Harvard Art Museums;Coloring the Universe;21-Jan-2016 - 18-Apr-2016;Venues;21-Jan-2016, Harvard Art Museums;18-Apr-2016, Harvard Art Museums;Viewing the Active Sun;1-Feb-2016 - 22-Apr-2016;Venues;1-Feb-2016 - 21-Mar-2016, Harvard Art Museums;23-Mar-2016 - 29-Mar-2016, Harvard Art Museums;22-Apr-2016, Harvard Art Museums;Pulsar Sounds and Symphony;22-Mar-2016;Venues;22-Mar-2016, Harvard Art Museums;Dionysos and Viticulture on Coins of Asia Minor;30-Mar-2016;Venues;30-Mar-2016, Harvard Art Museums;Adrift (On Dvaipayana);31-Mar-2016 - 14-Apr-2016;Venues;31-Mar-2016 - 14-Apr-2016, Harvard Art Museums;Rothko's Murals and Cosmic Microwave Background;16-Apr-2016 - 16-May-2016;Venues;16-Apr-2016, Harvard Art Museums;13-May-2016 - 16-May-2016, Harvard Art Museums;(In)visible: Light in Astronomy and Art Conservation;17-Apr-2016 - 25-Apr-2016;Venues;17-Apr-2016, Harvard Art Museums;21-Apr-2016, Harvard Art Museums;24-Apr-2016, Harvard Art Museums;25-Apr-2016, Harvard Art Museums;Cassiopeia A in a New Light;17-Apr-2016;Venues;17-Apr-2016, Harvard Art Museums;Franz Marc's Horses;19-Apr-2016;Venues;19-Apr-2016, Harvard Art Museums;The Typology;20-Apr-2016;Venues;20-Apr-2016, Harvard Art Museums;The Art and Science of New England Herbs;23-Apr-2016;Venues;23-Apr-2016, Harvard Art Museums;A Look at Magnetized Star Formation Through Radio Eyes;24-Apr-2016;Venues;24-Apr-2016, Harvard Art Museums;View Mercury transiting across the Sun;10-May-2016;Venues;10-May-2016, Harvard Art Museums;Blueprint for Counter Education;11-May-2016;Venues;11-May-2016, Harvard Art Museums;What is the Lightbox Gallery?;12-May-2016;Venues;12-May-2016, Harvard Art Museums;Feke on the Lightbox;19-May-2016;Venues;19-May-2016, Harvard Art Museums;Your Story Has Touched My Heart;23-May-2016 - 6-Jun-2016;Venues;23-May-2016 - 6-Jun-2016, Harvard Art Museums;Ben Rivers: The Shape of Things;1-Jul-2016 - 25-Oct-2016;Venues;1-Jul-2016 - 25-Oct-2016, Harvard Art Museums;Animation/Studio;26-Oct-2016 - 18-Dec-2016;Venues;26-Oct-2016 - 30-Nov-2016, Harvard Art Museums;2-Dec-2016 - 18-Dec-2016, Harvard Art Museums;Compulsive Practice;1-Dec-2016;Venues;1-Dec-2016, Harvard Art Museums;Animation/Studio II;12-Dec-2016 - 16-Apr-2017;Venues;23-Jan-2017 - 16-Apr-2017, Harvard Art Museums;Sarah Lewis: Vision & Justice;23-Dec-2016 - 8-Jan-2017;Venues;23-Dec-2016 - 8-Jan-2017, Harvard Art Museums;Suns Explorer;18-Apr-2017 - 30-Jun-2017;Venues;18-Apr-2017 - 23-Apr-2017, Harvard Art Museums;6-May-2017 - 30-Jun-2017, Harvard Art Museums;Materializing China: Objects from Harvard's Collections;24-Apr-2017 - 5-May-2017;Venues;24-Apr-2017 - 26-Apr-2017, Harvard Art Museums;1-May-2017 - 5-May-2017, Harvard Art Museums;Arts First;27-Apr-2017 - 30-Apr-2017;Venues;27-Apr-2017 - 30-Apr-2017, Harvard Art Museums;";
+
+var collaborators = "2014:11:16http://gallerysystems.com/exhibition/5366metaLAB (at) HarvardHarvard Art MuseumsHarvard Art MuseumsHarvard University, metaLABMatthew BattlesJessica YurkofskyChris MolinskiJessica YurkofskyJessica YurkofskyJessica YurkofskyMing TuKrystelle DenisJames YamadaJames YamadaJeffrey SchnappKrystelle DenisKrystelle DenisJames YamadaKrystelle DenisJames Yamada;2015:03:25http://gallerysystems.com/exhibition/5365New Digs and Discoveries at Sardis in TurkeyHarvard Art MuseumsHarvard Art MuseumsVermonsterTheresa HuntsmanNicholas Cahill;2015:03:30http://gallerysystems.com/exhibition/5362Visualizing Museum DataHarvard Art MuseumsHarvard Art MuseumsJeff StewardJeff StewardJeff StewardJeff StewardJeff Steward;2015:04:01http://gallerysystems.com/exhibition/5364What Is to Be Undone? Modernism in the 21st CenturyHarvard Art MuseumsHarvard Art MuseumsChris MolinskiMing TuMing TuMing TuAhmet Ö?ütJohn Hulsey;2015:04:07http://gallerysystems.com/exhibition/5361Copley Painting ViewerHarvard Art MuseumsHarvard Art MuseumsKate SmithTeri HensickFrancesca BewerMing TuMing TuMing Tu;2015:04:17http://gallerysystems.com/exhibition/5363Lightbox Navigations - Object MapHarvard Art MuseumsHarvard Art MuseumsHarvard University, metaLAB;2015:04:18http://gallerysystems.com/exhibition/5374Feral TreesHarvard Art MuseumsHarvard Art MuseumsHarvard University, metaLAB;2015:04:19http://gallerysystems.com/exhibition/5376CleanupHarvard Art MuseumsHarvard Art MuseumsChris MolinskiKyle Parry;2015:04:20http://gallerysystems.com/exhibition/5377KCRHarvard Art MuseumsHarvard Art MuseumsMing TuMing TuMing TuIvan SigalSands FishSands FishSands Fish;2015:04:21http://gallerysystems.com/exhibition/5378The Small Fiction ColliderHarvard Art MuseumsHarvard Art MuseumsJames YamadaJames YamadaJames YamadaJames Yamada;2015:04:22http://gallerysystems.com/exhibition/5379The ClockHarvard Art MuseumsHarvard Art MuseumsMing TuMing TuMing TuMing Tu;2015:04:24http://gallerysystems.com/exhibition/5381Uncovering the Museums' Hidden DataHarvard Art MuseumsHarvard Art MuseumsJeff StewardJeff StewardJeff StewardJeff Steward;2015:05:15http://gallerysystems.com/exhibition/5360Mapping Cultural SpaceHarvard Art MuseumsHarvard Art MuseumsHarvard UniversityJulie BucklerEve BlauKelly O'NeillMegan Duncan SmithStephanie Plant;2015:05:28http://gallerysystems.com/exhibition/5359Thinking with CollectionsHarvard Art MuseumsHarvard Art MuseumsHarvard UniversityDavid OdoRachel ThompsonChris MolinskiMing TuMing TuMing TuJiayi LiShowly NicholsonSara PriceChloe ReichelSnow Rui;2015:07:06http://gallerysystems.com/exhibition/5358Beautiful Data IIHarvard Art MuseumsHarvard Art MuseumsHarvard University, metaLABCarpenter Center for the Visual ArtsMatthew BattlesIan CallahanMing TuSara NewmanCristoforo MagliozziKrystelle DenisIvan SigalFrancesca BacciAnne LutherNikita Braguinski;2015:09:11http://gallerysystems.com/exhibition/5356Astro-Art ProjectHarvard Art MuseumsHarvard Art MuseumsHarvard-Smithsonian Center for AstrophysicsFrancesca BewerFrancesca BewerMing TuMing TuMing TuAlyssa Goodman;2015:10:05http://gallerysystems.com/exhibition/5355American Archives Month 2015Harvard Art MuseumsHarvard Art MuseumsMegan SchwenkeZak JensenMing TuMegan SchwenkeMing TuMing TuMing Tu;2015:10:06http://gallerysystems.com/exhibition/5423Imaging Unseen LayersHarvard Art MuseumsHarvard Art MuseumsKate SmithTeri HensickFrancesca BewerFrancesca BewerMing TuMing TuMing Tu;2015:10:07http://gallerysystems.com/exhibition/5426Visualizing the X-Ray UniverseHarvard Art MuseumsHarvard Art MuseumsHarvard-Smithsonian Center for AstrophysicsFrancesca BewerMing TuMing TuMing TuJoseph DePasquale;2015:10:08http://gallerysystems.com/exhibition/5425The SolarHarvard Art MuseumsHarvard Art MuseumsHarvard-Smithsonian Center for AstrophysicsMing TuMing TuMing TuHenry Trae Winter III;2015:10:09http://gallerysystems.com/exhibition/5427World Wide TelescopeHarvard Art MuseumsHarvard Art MuseumsHarvard-Smithsonian Center for AstrophysicsFrancesca BewerAlyssa Goodman;2015:10:22http://gallerysystems.com/exhibition/5354Feke's Isaac Royall and His FamilyHarvard Art MuseumsHarvard Art MuseumsKate SmithEthan LasserMing TuMing TuMing Tu;2015:10:29http://gallerysystems.com/exhibition/5353AMPMHarvard Art MuseumsHarvard Art MuseumsMing TuMing TuMing Tu;2015:11:19http://gallerysystems.com/exhibition/5351Exploring LightHarvard Art MuseumsHarvard Art MuseumsKate SmithTeri HensickFrancesca BewerFrancesca BewerMing TuMing TuMing Tu;2015:11:23http://gallerysystems.com/exhibition/5350Vincent van Gogh's Three Pairs of ShoesHarvard Art MuseumsHarvard Art MuseumsKate SmithFrancesca BewerFrancesca BewerMing TuMing TuMing Tu;2015:12:01http://gallerysystems.com/exhibition/5349Radiant PresenceHarvard Art MuseumsHarvard Art MuseumsVisual AIDSKyle CroftAlex FialhoBill ArningIan AlteveerChris VargasRae Lewis-ThorntonMark S. KingAllen FrameMaria MejiaJack MackenrothKimberly Drew;2016:01:20http://gallerysystems.com/exhibition/5348American Professional Photographers Collection J-Term WorkshopHarvard Art MuseumsHarvard Art MuseumsHarvard University, metaLABMatthew BattlesSara Newman;2016:01:21http://gallerysystems.com/exhibition/5347Coloring the UniverseHarvard Art MuseumsHarvard Art MuseumsNASAHarvard-Smithsonian Center for AstrophysicsFrancesca BewerMing TuMing TuMing TuKimberly Arcand;2016:02:01http://gallerysystems.com/exhibition/5346Viewing the Active SunHarvard Art MuseumsHarvard Art MuseumsHarvard-Smithsonian Center for AstrophysicsFrancesca BewerMing TuMing TuMing TuHenry Trae Winter III;2016:03:22http://gallerysystems.com/exhibition/5344Pulsar Sounds and SymphonyHarvard Art MuseumsHarvard Art MuseumsHarvard-Smithsonian Center for AstrophysicsFrancesca BewerBulent Kiziltan;2016:03:30http://gallerysystems.com/exhibition/5343Dionysos and Viticulture on Coins of Asia MinorHarvard Art MuseumsHarvard Art MuseumsCarmen Arnold-BiucchiMing TuMing TuMing Tu;2016:03:31http://gallerysystems.com/exhibition/5341Adrift (On Dvaipayana)Harvard Art MuseumsHarvard Art MuseumsAtul BhallaStephanie RozmanChris Molinski;2016:04:16http://gallerysystems.com/exhibition/5424Rothko's Murals and Cosmic Microwave BackgroundHarvard Art MuseumsHarvard Art MuseumsNetherlands Organisation for Scientific ResearchFrancesca BewerMing TuMing TuMing TuMing TuRonald Stark;2016:04:17http://gallerysystems.com/exhibition/5420(In)visible: Light in Astronomy and Art ConservationHarvard Art MuseumsHarvard Art MuseumsHarvard-Smithsonian Center for AstrophysicsFrancesca BewerMing TuMing TuMing TuMing TuFrancesca BewerJoseph DePasquale;2016:04:17http://gallerysystems.com/exhibition/5422Cassiopeia A in a New LightHarvard Art MuseumsHarvard Art MuseumsHarvard-Smithsonian Center for AstrophysicsFrancesca BewerMing TuMing TuMing TuJoseph DePasquale;2016:04:19http://gallerysystems.com/exhibition/5382Franz Marc's HorsesHarvard Art MuseumsHarvard Art MuseumsAndrea von HedenstroemMing TuMing TuMing Tu;2016:04:20http://gallerysystems.com/exhibition/5383The TypologyHarvard Art MuseumsHarvard Art MuseumsMing TuMing TuMing TuDiana Zlatanovski;2016:04:23http://gallerysystems.com/exhibition/5384The Art and Science of New England HerbsHarvard Art MuseumsHarvard Art MuseumsLian BrunoMing TuMing TuMing Tu;2016:04:24http://gallerysystems.com/exhibition/5421A Look at Magnetized Star Formation Through Radio EyesHarvard Art MuseumsHarvard Art MuseumsHarvard-Smithsonian Center for AstrophysicsFrancesca BewerMing TuMing TuMing TuChat Hull;2016:05:10http://gallerysystems.com/exhibition/5339View Mercury transiting across the SunHarvard Art MuseumsHarvard Art MuseumsHarvard-Smithsonian Center for AstrophysicsFrancesca BewerMing TuMing TuMing TuHenry Trae Winter III;2016:05:11http://gallerysystems.com/exhibition/5338Blueprint for Counter EducationHarvard Art MuseumsHarvard Art MuseumsHarvard University, metaLABCarpenter Center for the Visual ArtsJessica YurkofskyKrystelle DenisJeffrey Schnapp;2016:05:12http://gallerysystems.com/exhibition/5337What is the Lightbox Gallery?Harvard Art MuseumsHarvard Art MuseumsMing TuMing TuMing TuMing TuMing Tu;2016:05:19http://gallerysystems.com/exhibition/5335Feke on the LightboxHarvard Art MuseumsHarvard Art MuseumsKate SmithEthan LasserMing TuMing TuMing Tu;2016:05:23http://gallerysystems.com/exhibition/5308Your Story Has Touched My HeartHarvard Art MuseumsHarvard Art MuseumsHarvard University, metaLABMatthew BattlesSara Newman;2016:07:01http://gallerysystems.com/exhibition/5307Ben Rivers: The Shape of ThingsHarvard Art MuseumsHarvard Art MuseumsMing TuChris MolinskiBen RiversMing TuMing Tu;2016:10:26http://gallerysystems.com/exhibition/5429Animation/StudioHarvard Art MuseumsHarvard Art MuseumsChris MolinskiMatt SaundersSally ScopaMegan BaileyBrooke BourgeoisLaila CarterHillary DoMichael Kennedy-YoonCasey Khang MooreAlma MacbrideTeddy NinhYoungjin SongEmilio VavarellaKay XiaFaye Zhang;2016:12:01http://gallerysystems.com/exhibition/5452Compulsive PracticeHarvard Art MuseumsHarvard Art MuseumsAlex FialhoVisual AIDSKyle CroftMark S. KingCarol LeighJuanita MohammedRay NavarroLuna Luis OrtizThe Southern AIDS Living QuiltNelson SullivanJustin Terry-SmithJames WentzyJean CarlomustoAlexandra JuhaszHugh Ryan;2016:12:12http://gallerysystems.com/exhibition/5478Animation/Studio IIHarvard Art MuseumsHarvard Art MuseumsChris MolinskiMatt SaundersSally ScopaMegan BaileyBrooke BourgeoisLaila CarterHillary DoMichael Kennedy-YoonCasey Khang MooreAlma MacbrideTeddy NinhYoungjin SongEmilio VavarellaKay XiaFaye Zhang;2016:12:23http://gallerysystems.com/exhibition/5468Sarah Lewis: Vision & JusticeHarvard Art MuseumsHarvard Art MuseumsSarah LewisChris Molinski;2017:04:18http://gallerysystems.com/exhibition/5508Suns ExplorerHarvard Art MuseumsHarvard Art MuseumsChris MolinskiJeff StewardJeff StewardJeff StewardGavriella Levy HaskellGavriella Levy HaskellGavriella Levy Haskell;2017:04:24http://gallerysystems.com/exhibition/5561Materializing China: Objects from Harvard's CollectionsHarvard Art MuseumsHarvard Art MuseumsDr. Rowan FladDavid OdoChris MolinskiGavriella Levy HaskellGavriella Levy HaskellGavriella Levy Haskell;2017:04:27http://gallerysystems.com/exhibition/5562Arts FirstHarvard Art MuseumsHarvard Art MuseumsChris MolinskiFaye Zhang";
+
+
+//metaLAB (at) Harvard;16-Nov-2014 - 27-May-2015;Venues;16-Nov-2014 - 27-May-2015, Harvard Art Museums;19-Dec-2016 - 22-Dec-2016, Harvard Art Museums
+
+//2014:11:16http://gallerysystems.com/exhibition/5366metaLAB (at) HarvardHarvard Art MuseumsHarvard Art MuseumsHarvard University, metaLABMatthew BattlesJessica YurkofskyChris MolinskiJessica YurkofskyJessica YurkofskyJessica YurkofskyMing TuKrystelle DenisJames YamadaJames YamadaJeffrey SchnappKrystelle DenisKrystelle DenisJames YamadaKrystelle DenisJames Yamada
+
+var months = {"Jan": 0, "Feb": 1, "Mar": 2, "Apr": 3, "May": 4, "Jun": 5, "Jul": 6, "Aug": 7, "Sep": 8, "Oct": 9, "Nov": 10, "Dec": 11};
+
+var month = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+
+var day = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+
+var venueRegEx = /([^;]*);[^;]*;Venues;/g;
+var dateRegEx = /([0-9]{1,2})-([A-Za-z]{3})-([0-9]{4})(?: - ([0-9]{1,2})-([A-Za-z]{3})-([0-9]{4}))?, Harvard Art Museums;/g;
+
+var collabRegEx = /[0-9]{4}:[0-9]{1,2}:[0-9]{1,2}http:\/\/gallerysystems.com\/exhibition\/[0-9]*/;
+var nameRegEx = /(metaLAB \(at\) Harvard|Harvard University, metaLAB|NASA|Henry Trae Winter III|Visual AIDS|The Southern AIDS Living Quilt|Joseph DePasquale|(?:[A-Za-z][a-z\.]*[ \-])*[A-Z][a-z]*)/g;
+
+var collabList = collaborators.split(";");
+
+var allCollaborators = {};
+var exhibitions = {};
+var timeChunks = [];
+
+var colors = [undefined, [], [], [], [], [], [], [], [], [], [], [], []];
+for (var i = 1; i <= 4; i++) {
+	var xmlrequest = new XMLHttpRequest();
+	
+	var index = i;
+	xmlrequest.onreadystatechange = function() {
+		if (this.readyState == 4) {
+			if (this.status == 200) {
+				var data = JSON.parse(this.responseText);
+				for (var j = 0; j < data.records.length; j++) {
+					colors[data.records[j].month][data.records[j].day] = data.records[j].color;
+				}
+			} 
+		}
+	};
+			
+	xmlrequest.open("GET", "http://api.harvardartmuseums.org/spectrum?apikey=f0ebae50-8589-11e6-8681-638bad7e2ec3&size=100&page=" + i, true);
+	xmlrequest.send();
+}
+
+
+var vStart = venueRegEx.exec(venues);
+var dateRes;
+var cStart;
+var nameRes;
+var exhib;
+var dates;
+var collabs;
+var maxCollabs = 0;
+var done = false;
+var label;
+var nameExceptions = ["Harvard Art Museums", "Chris Molinski", "Ming Tu", "Gavriella Levy Haskell"];
+while (!done) {
+	exhib = {title: vStart[1], dates: [], collaborators: [], links: []};
+
+	if ((vStart = venueRegEx.exec(venues)) == null) {
+		while ((dateRes = dateRegEx.exec(venues)) != null) {
+			dates = [new Date(dateRes[3], months[dateRes[2]], dateRes[1], 12, 0, 0, 0)];
+			if (dateRes[4] == undefined) {
+				dates[1] = new Date(dates[0].valueOf());
+			} else {
+				dates[1] = new Date(dateRes[6], months[dateRes[5]], dateRes[4], 12, 0, 0, 0);
+			}
+			timeChunks.push({dates: dates, title: exhib.title});
+			exhib.dates.push(dates);
+		}
+
+		done = true;
+	} else {
+		while ((dateRes = dateRegEx.exec(venues)) != null) {
+			dates = [new Date(dateRes[3], months[dateRes[2]], dateRes[1], 12, 0, 0, 0)];
+			if (dateRes[4] == undefined) {
+				dates[1] = new Date(dates[0].valueOf());
+			} else {
+				dates[1] = new Date(dateRes[6], months[dateRes[5]], dateRes[4], 12, 0, 0, 0);
+			}
+			timeChunks.push({dates: dates, title: exhib.title});
+			exhib.dates.push(dates);
+
+			if (dateRes.index + dateRes[0].length >= vStart.index) {
+				break;
+			}
+		}
+	}
+
+	cStart = collabRegEx.exec(collabList.shift());
+	collabs = {};
+	while((nameRes = nameRegEx.exec(cStart.input.substring(cStart.index + cStart[0].length + exhib.title.length))) != null) {
+		collabs[nameRes[1]] = 0;
+		if (nameExceptions.indexOf(nameRes[1]) == -1) {
+			if (allCollaborators[nameRes[1]] == undefined) {
+				allCollaborators[nameRes[1]] = {};
+			} 
+			for (var i = 0; i < exhib.dates.length; i++) {
+				allCollaborators[nameRes[1]][Math.round(midpoint(exhib.dates[i]).valueOf()/(24*60*60*1000))] = exhib.title;
+			}
+		}
+	}
+	exhib.collaborators = Object.keys(collabs);
+	if (exhib.collaborators.length > maxCollabs) {
+		maxCollabs = exhib.collaborators.length;
+	}
+
+	exhibitions[exhib.title] = exhib;
+
+	label = document.createElement("div");
+	label.className = exhib.title.replace(/[^A-Za-z0-9]*/g, "") + " label";
+	label.innerHTML = "<span><h1>" + exhib.title + "</h1><br />" + exhib.dates.map(function(dates) {if (dates[0].valueOf() == dates[1].valueOf()) { return formatDate(dates[0]) } else {return (formatDate(dates[0]) + " - " + formatDate(dates[1]))}}).join("<br />") + "<br /><br />" + exhib.collaborators.join(", ") + "</span>";
+	document.body.appendChild(label);
+}
+
+function formatDate(date) {
+	return (month[date.getMonth()] + " " + date.getDate() + ", " + date.getFullYear());
+}
+
+function midpoint(dates) {
+	return new Date((dates[1].valueOf() + dates[0].valueOf())/2);
+}
+
+function getDateSpan(d) {
+	return (Math.round((d.dates[1] - d.dates[0])/(24*60*60*1000)) + 1);
+}
+
+function colorByDate(d) {
+	return (colors[midpoint(d.data.dates).getMonth() + 1][midpoint(d.data.dates).getDate()]);
+}
+
+function sortByDate(a, b) {
+	return (midpoint(a.dates) - midpoint(b.dates));
+}
+
+function showExhibition(d) {
+	d3.selectAll("." + d.data.title.replace(/[^A-Za-z0-9]*/g, "")).style("opacity", 1);
+	d3.selectAll("." + d.data.title.replace(/[^A-Za-z0-9]*/g, "") + "arc").style("opacity", 1);
+}
+
+function hideExhibition(d) {
+	d3.selectAll("." + d.data.title.replace(/[^A-Za-z0-9]*/g, "")).style("opacity", 0);
+	d3.selectAll("." + d.data.title.replace(/[^A-Za-z0-9]*/g, "") + "arc").style("opacity", .75);
+}
+
+function getAngle(date) {
+	return (2*Math.PI * (date.valueOf() - minDate.valueOf())/(maxDate.valueOf() - minDate.valueOf()));
+}
+
+function timelinePie(data) {
+	var arcs = [];
+	for (var i = 0; i < data.length; i++) {
+		arcs.push({
+			data: data[i], 
+			value: getDateSpan(data[i]), 
+			index: i, 
+			startAngle: getAngle(data[i].dates[0]), 
+			endAngle: getAngle(data[i].dates[1]), 
+			padAngle: 0
+		});
+	}
+	return arcs;
+}
+
+function collabLinks(data) {
+	var links = [];
+	for (var collab in data){
+		var dates = Object.keys(data[collab]);
+		while (dates.length > 0) {
+			var d = dates.shift();
+			for (var i = 0; i < dates.length; i++) {
+				if (data[collab][d] != data[collab][dates[i]]) {
+					links.push({
+						source: {
+							date: new Date(d*24*60*60*1000),
+							data: {title: data[collab][d]}
+						}, 
+						target: {
+							date: new Date(dates[i]*24*60*60*1000),
+							data: {title: data[collab][dates[i]]}
+						}, 
+						name: collab
+					});
+				}
+			}
+		}
+	}
+	return links;
+}
+
+var links = collabLinks(allCollaborators);
+
+var width = window.innerWidth;
+var height = window.innerHeight;
+var radius = .85*Math.min(width, height)/2;
+var unit = radius/45;
+
+function outerRadius(d) {
+	return (radius - 5*unit + 4*unit*(exhibitions[d.data.title].collaborators.length/maxCollabs));
+}
+
+var show = 0;
+var hide = 0;
+var sTimer;
+var hTimer;
+var indicator;
+var animating = false;
+setTimeout(setHTML, 2000);
+function setHTML() {
+	var today = new Date();
+	document.body.style.color = colors[today.getMonth() + 1][today.getDate()];
+
+	var calendarFont = 0;
+
+	var labels = d3.selectAll(".label");
+	var size = Math.sqrt(Math.pow(2*(radius - 11*unit), 2)/2);
+	labels.style("width", size + "px");
+	labels.style("height", size + "px");
+	labels.style("top", (height - size)/2 + "px");
+	labels.style("left", (width - size)/2 + "px");
+	if (size < 250) {
+		calendarFont = 5;
+		labels.style("font-size", "8px");
+	} else if (size < 500) {
+		calendarFont = 10;
+		labels.style("font-size", "12px");
+	} else if (size < 1000) {
+		calendarFont = 15;
+		labels.style("font-size", "20px");
+	} else {
+		calendarFont = 20;
+		labels.style("font-size", "36px");
+	}
+
+	var svg = d3.select("#graph").append("svg");
+	svg.attr("width", width);
+	svg.attr("height", height);
+	svg = svg.append("g");
+	svg.attr("transform", "translate(" + width/2 + ", " + height/2 + ")");
+
+	var link = d3.linkRadial();
+	link.angle(function(d) {return getAngle(d.date)});
+	link.radius(function(d) {return radius - 11*unit});
+
+	links.forEach(function(d) {
+		var path = svg.append("path");
+		path.datum(d);
+		path.attr("d", link);
+		path.style("stroke", "#000000");
+		path.style("stroke-width", .5);
+		path.attr("class", "link");
+	});
+
+	link.radius(function(d) {return d.r});
+
+	calendar.forEach(function(d) {
+		var path = svg.append("path");
+		path.datum({
+			source: {date: d.date, r: radius - .5*unit}, 
+			target: {date: d.date, r: radius - 11*unit}
+		});
+		path.attr("d", link);
+		path.style("stroke", colors[d.date.getMonth() + 1][d.date.getDate()]);
+		path.style("stroke-width", 1);
+		path.attr("class", "marker");
+
+		path = svg.append("text");
+		path.text(d.event);
+		var rotation = getAngle(d.date)*(180/Math.PI);
+		if (rotation >= 180) {
+			path.attr("text-anchor", "end");
+			path.attr("transform", "rotate(" + rotation + ") translate(0, -" + (radius - .5*unit) + ") rotate(90)");
+		} else {
+			path.attr("text-anchor", "start");
+			path.attr("transform", "rotate(" + rotation + ") translate(0, -" + (radius - .5*unit) + ") rotate(-90)");
+		}
+		path.attr("dy", calendarFont/3);
+		path.style("fill", colors[d.date.getMonth() + 1][d.date.getDate()]);
+		path.style("font-size", calendarFont + "px");
+		path.style("font-family", "Helvetica");
+		path.attr("class", "marker");
+	});
+	
+	var arc = d3.arc();
+	arc.outerRadius(outerRadius);
+	arc.innerRadius(radius - 11*unit);
+	arc.cornerRadius(.5*unit);
+
+	timeChunks = timeChunks.sort(sortByDate);
+	var arcs = timelinePie(timeChunks);
+
+	var dateOffset;
+	arcs.forEach(function(d, i) {
+		// Arc 
+		var path = svg.append("path");
+		path.datum(d);
+		path.attr("d", arc);
+		path.style("fill", "#FFFFFF");
+		path.style("stroke", "#FFFFFF");
+		path.style("stroke-width", 2);
+
+		var path = svg.append("path");
+		path.datum(d);
+		path.attr("d", arc);
+		path.style("fill", colorByDate(d));
+		path.style("stroke", colorByDate(d));
+		path.style("stroke-width", 2);
+		path.on("mouseover", showExhibition);
+		path.on("mouseout", hideExhibition);
+		path.attr("class", d.data.title.replace(/[^A-Za-z0-9]*/g, "") + "arc arc arc" + i);
+	});
+
+	indicator = svg.append("path");
+	indicator.attr("d", d3.symbol().size(function() {return Math.pow(calendarFont, 2)})());
+	indicator.style("fill", "#000000");
+	indicator.style("opacity", 0);
+	indicator.attr("transform", "rotate(0) translate(0, -" + (radius - 11*unit) + ")");
+
+	toggleAnimation();
+
+	document.onkeydown = function(e) {
+		if (e.keyCode == 32) {
+			toggleAnimation();
+		}
+	};
+}
+
+function toggleAnimation() {
+	if (animating) {
+		animating = false;
+		clearTimeout(sTimer);
+		clearTimeout(hTimer);
+		endAnimation();
+	} else {
+		animating = true;
+		startAnimation();
+	}
+}
+
+function showArc() {
+	if (animating) {
+		d3.selectAll("." + timeChunks[show].title.replace(/[^A-Za-z0-9]*/g, "")).style("opacity", 1);
+		d3.selectAll(".arc" + show).style("opacity", 1);
+
+		var offset = (timeChunks[show].dates[1].valueOf() - timeChunks[show].dates[0].valueOf())/(24*60*60*10);
+
+		hTimer = setTimeout(hideArc, offset);
+
+		show++;
+
+		if (show < timeChunks.length) {
+			offset = (timeChunks[show].dates[0].valueOf() - timeChunks[show - 1].dates[0].valueOf())/(24*60*60*10);
+			sTimer = setTimeout(showArc, offset);
+
+			indicator.transition().ease(d3.easeLinear).duration(offset).attrTween("transform", function() {return function(t) {return "rotate(" + (t*(getAngle(timeChunks[show].dates[0]) - getAngle(timeChunks[show - 1].dates[0])) + getAngle(timeChunks[show - 1].dates[0]))*(180/Math.PI) + ") translate(0, -" + (radius - 11*unit) + ")"}});
+		} else {
+			indicator.transition().ease(d3.easeLinear).duration(offset).attrTween("transform", function() {return function(t) {return "rotate(" + (t*(getAngle(timeChunks[show - 1].dates[1]) - getAngle(timeChunks[show - 1].dates[0])) + getAngle(timeChunks[show - 1].dates[0]))*(180/Math.PI) + ") translate(0, -" + (radius - 11*unit) + ")"}});
+		}
+	} 
+}
+
+function hideArc() {
+	d3.selectAll("." + timeChunks[hide].title.replace(/[^A-Za-z0-9]*/g, "")).style("opacity", 0);
+	d3.selectAll(".arc" + hide).style("opacity", .75);
+
+	hide++;
+
+	if (hide == timeChunks.length) {
+		endAnimation();
+	}
+}
+
+function endAnimation() {
+	d3.selectAll(".arc").style("pointer-events", "auto");
+	d3.selectAll(".link").style("opacity", .1);
+	d3.selectAll(".marker").style("opacity", 1);
+	d3.selectAll(".arc").style("opacity", .75);
+	d3.selectAll(".label").style("opacity", 0);
+	indicator.style("opacity", 0);
+	indicator.attr("transform", "rotate(0) translate(0, -" + (radius - 11*unit) + ")");
+}
+
+function startAnimation() {
+	show = 0;
+	hide = 0;
+	d3.selectAll(".arc").style("pointer-events", "none");
+	d3.selectAll(".link").style("opacity", 0);
+	d3.selectAll(".marker").style("opacity", 0);
+	d3.selectAll(".arc").style("opacity", 0);
+	d3.selectAll(".label").style("opacity", 0);
+	indicator.style("opacity", 1);
+	showArc();
+}
+</script>
+</body>
+</html>
